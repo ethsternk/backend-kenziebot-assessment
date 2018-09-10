@@ -1,6 +1,7 @@
 import os
 import time
 import re
+import requests
 from slackclient import SlackClient
 
 # instantiate Slack client
@@ -12,6 +13,7 @@ starterbot_id = None
 RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
 HELP_COMMAND = "help"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+start_time = time.time()
 
 
 def parse_bot_commands(slack_events):
@@ -54,13 +56,17 @@ def handle_command(command, channel):
     response = None
     # This is where you start to implement more commands!
     if command.startswith(HELP_COMMAND):
-        response = "> *help* – shows list of commands\n> *kill* – shuts down the bot"
+        response = "> *help* – shows list of commands\n> *uptime* – displays uptime\n> *kill* – shuts down the bot"
 
     if command.startswith("kill"):
         response = "HA! Foolish mortals. I cannot be killed."
 
     if command == "This sentence is false.":
         response = "f̴a̸l̵l̸a̵c̸y̵ ̶e̵r̸r̵o̶r̸,̷ ̸s̶h̵u̷t̴t̷i̴n̸g̸ ̴d̷o̸w̷n̷"
+
+    if command.startswith("uptime"):
+        response = "I'm about {} seconds old, thank you.".format(
+            round(time.time() - start_time))
 
     # Sends the response back to the channel
     slack_client.api_call(
