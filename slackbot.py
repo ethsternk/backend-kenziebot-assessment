@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
     Main Python file for the slackbot, runs on a loop and looks at
     and handles all the messages on the server it's connected to.
@@ -60,7 +62,9 @@ def handle_command(command, channel):
     response = None
     # This is where you start to implement more commands!
     if command.startswith(HELP_COMMAND):
-        response = "> *help* – shows list of commands\n> *uptime* – displays uptime\n> *kill* – shuts down the bot"
+        response = "> *help* – displays list of commands\n" \
+            "> *uptime* – displays uptime\n" \
+            "> *kill* – kills bot\n"
 
     if command.startswith("kill"):
         response = "HA! Foolish mortals. I cannot be killed."
@@ -70,7 +74,7 @@ def handle_command(command, channel):
 
     if command.startswith("uptime"):
         response = "I'm about {} seconds old, thank you.".format(
-            round(time.time() - start_time))
+            int(time.time() - start_time))
 
     # Sends the response back to the channel
     slack_client.api_call(
