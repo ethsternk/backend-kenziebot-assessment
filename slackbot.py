@@ -1,3 +1,8 @@
+"""
+    Main Python file for the slackbot, runs on a loop and looks at
+    and handles all the messages on the server it's connected to.
+"""
+
 import os
 import time
 import re
