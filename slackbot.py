@@ -63,16 +63,13 @@ def handle_command(command, channel):
     # This is where you start to implement more commands!
     if command.startswith(HELP_COMMAND):
         response = "> *help* – displays list of commands\n" \
-            "> *uptime* – displays uptime\n" \
+            "> *ping* – displays uptime\n" \
             "> *kill* – kills bot\n"
 
     if command.startswith("kill"):
         response = "HA! Foolish mortals. I cannot be killed."
 
-    if command == "This sentence is false.":
-        response = "f̴a̸l̵l̸a̵c̸y̵ ̶e̵r̸r̵o̶r̸,̷ ̸s̶h̵u̷t̴t̷i̴n̸g̸ ̴d̷o̸w̷n̷"
-
-    if command.startswith("uptime"):
+    if command.startswith("ping"):
         response = "I'm about {} seconds old, thank you.".format(
             int(time.time() - start_time))
 
@@ -87,6 +84,11 @@ def handle_command(command, channel):
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
         print("Starter Bot connected and running!")
+        slack_client.api_call(
+            "chat.postMessage",
+            channel="CCD7USCR0",
+            text="Sup, just got birthed from nothing."
+        )
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
