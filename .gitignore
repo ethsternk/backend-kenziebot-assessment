@@ -1,3 +1,5 @@
 .vscode/
 .env/
 resources.txt
+__pycache__/
+slackbot.pyc
