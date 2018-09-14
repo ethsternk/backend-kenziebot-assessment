@@ -8,6 +8,7 @@
 import os
 import time
 import re
+import logging
 from slackclient import SlackClient
 
 # instantiate Slack client
@@ -20,6 +21,10 @@ RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
 HELP_COMMAND = "help"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 start_time = time.time()
+
+# logging
+logging.basicConfig(filename='slackbot.log', level=logging.DEBUG,
+                    format='%(asctime)s:%(levelname)s:%(message)s')
 
 
 def parse_bot_commands(slack_events):
@@ -73,6 +78,13 @@ def handle_command(command, channel):
         response = "I'm about {} seconds old, thank you.".format(
             int(time.time() - start_time))
 
+    # logs command
+    logging.debug('Recieved command: {}'.format(command))
+    if response:
+        logging.debug('Responded with: {}'.format(response))
+    else:
+        logging.debug('Responded with: {}'.format(default_response))
+
     # Sends the response back to the channel
     slack_client.api_call(
         "chat.postMessage",
@@ -84,6 +96,7 @@ def handle_command(command, channel):
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
         print("Starter Bot connected and running!")
+        logging.debug('Started bot.')
         slack_client.api_call(
             "chat.postMessage",
             channel="CCD7USCR0",

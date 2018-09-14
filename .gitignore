@@ -3,3 +3,4 @@
 resources.txt
 __pycache__/
 slackbot.pyc
+slackbot.log
