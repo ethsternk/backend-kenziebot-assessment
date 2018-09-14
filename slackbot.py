@@ -9,6 +9,8 @@ import os
 import time
 import re
 import logging
+import requests
+import random
 from slackclient import SlackClient
 
 # instantiate Slack client
@@ -69,6 +71,7 @@ def handle_command(command, channel):
     if command.startswith(HELP_COMMAND):
         response = "> *help* – displays list of commands\n" \
             "> *ping* – displays uptime\n" \
+            "> *xkcd* – posts a random xkcd comic\n" \
             "> *kill* – kills bot\n"
 
     if command.startswith("kill"):
@@ -77,6 +80,12 @@ def handle_command(command, channel):
     if command.startswith("ping"):
         response = "I'm about {} seconds old, thank you.".format(
             int(time.time() - start_time))
+
+    if command.startswith("xkcd"):
+        newest = requests.get('http://xkcd.com/info.0.json').json()
+        rng = random.randint(1, newest['num'] + 1)
+        r = requests.get('http://xkcd.com/' + str(rng) + '/info.0.json').json()
+        response = r['alt'] + ' ' + r['img']
 
     # logs command
     logging.debug('Recieved command: {}'.format(command))
