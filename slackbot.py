@@ -14,7 +14,7 @@ import random
 import signal
 from slackclient import SlackClient
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv('./.env')
 
 # instantiate Slack client
 slack_client = SlackClient(os.getenv('SLACK_BOT_TOKEN'))
