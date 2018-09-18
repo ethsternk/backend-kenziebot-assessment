@@ -11,10 +11,13 @@ import re
 import logging
 import requests
 import random
+import signal
 from slackclient import SlackClient
+from dotenv import load_dotenv
+load_dotenv()
 
 # instantiate Slack client
-slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+slack_client = SlackClient(os.getenv('SLACK_BOT_TOKEN'))
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
 
@@ -27,6 +30,25 @@ start_time = time.time()
 # logging
 logging.basicConfig(filename='slackbot.log', level=logging.DEBUG,
                     format='%(asctime)s:%(levelname)s:%(message)s')
+
+# exit flag for os signals
+exit_flag = False
+
+
+def signal_handler(sig_num, frame):
+    """
+        Handler for OS signals SIGTERM and SIGINT. Stops the program
+        and logs info to the log.
+    """
+    global exit_flag
+    signames = dict((k, v) for v, k in reversed(sorted(
+        signal.__dict__.items())) if v.startswith('SIG')
+        and not v.startswith('SIG_'))
+    logging.warning('Received {} signal.'.format(signames[sig_num]))
+    logging.debug('Bot stopped.')
+    logging.debug('Bot was up for about ' +
+                  str(int(time.time() - start_time)) + ' seconds.')
+    exit_flag = True
 
 
 def parse_bot_commands(slack_events):
@@ -57,29 +79,53 @@ def parse_direct_mention(message_text):
         return (None, None)
 
 
+def format_time(s):
+    """
+        Takes a time duration (in seconds) and returns
+        a formatted string, like `49 minutes`
+    """
+    if s >= 86400:
+        unit = 'day'
+        time = s / 86400
+    elif s >= 3600:
+        unit = 'hour'
+        time = s / 3600
+    elif s >= 60:
+        unit = 'minute'
+        time = s / 60
+    else:
+        unit = 'second'
+        time = s
+    tail = ''
+    if time != 1:
+        tail = 's'
+    return str(time) + ' ' + unit + tail
+
+
 def handle_command(command, channel):
     """
         Executes bot command if the command is known.
     """
     # Default response is help text for the user
-    default_response = "Sorry, I don't speak Japanese. Try *{}*.".format(
+    default_response = "Sorry, I don't speak Japanese. Try `{}`.".format(
         HELP_COMMAND)
 
     # Finds and executes the given command, filling in response
     response = None
     # This is where you start to implement more commands!
     if command.startswith(HELP_COMMAND):
-        response = "> *help* – displays list of commands\n" \
-            "> *ping* – displays uptime\n" \
-            "> *xkcd* – posts a random xkcd comic\n" \
-            "> *kill* – kills bot\n"
+        response = "Here are some commands to try:\n" \
+            "> `help` – displays list of commands\n" \
+            "> `ping` – displays uptime\n" \
+            "> `xkcd` – posts a random xkcd comic\n" \
+            "> `kill` – kills bot\n"
 
     if command.startswith("kill"):
         response = "HA! Foolish mortals. I cannot be killed."
 
     if command.startswith("ping"):
-        response = "I'm about {} seconds old, thank you.".format(
-            int(time.time() - start_time))
+        response = "I'm about {} old, thank you.".format(
+            format_time(int(time.time() - start_time)))
 
     if command.startswith("xkcd"):
         newest = requests.get('http://xkcd.com/info.0.json').json()
@@ -92,7 +138,7 @@ def handle_command(command, channel):
     if response:
         logging.debug('Responded with: {}'.format(response))
     else:
-        logging.debug('Responded with: {}'.format(default_response))
+        logging.debug('Responded with a list of commands.')
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -103,20 +149,31 @@ def handle_command(command, channel):
 
 
 if __name__ == "__main__":
+
+    # hooking SIGINT and SIGTERM from OS
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
+        print("Bot connected and running!")
         logging.debug('Started bot.')
         slack_client.api_call(
             "chat.postMessage",
             channel="CCD7USCR0",
-            text="Sup, just got birthed from nothing."
+            text="Greetings, inferior beings."
         )
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
-        while True:
+        while not exit_flag:
             command, channel = parse_bot_commands(slack_client.rtm_read())
             if command:
                 handle_command(command, channel)
             time.sleep(RTM_READ_DELAY)
+        slack_client.api_call(
+            "chat.postMessage",
+            channel="CCD7USCR0",
+            text="This isn't the last you'll see of me, worms!"
+        )
+        print("Bot stopped.")
     else:
         print("Connection failed. Exception traceback printed above.")

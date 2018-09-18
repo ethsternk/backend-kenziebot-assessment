@@ -1,6 +1,7 @@
 .vscode/
-.env/
+.env
 resources.txt
 __pycache__/
 slackbot.pyc
 slackbot.log
+slackbot/
