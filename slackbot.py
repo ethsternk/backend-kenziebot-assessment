@@ -135,10 +135,10 @@ def handle_command(command, channel):
 
     # logs command
     logging.debug('Recieved command: {}'.format(command))
-    if response:
-        logging.debug('Responded with: {}'.format(response))
-    else:
+    if command.startswith(HELP_COMMAND):
         logging.debug('Responded with a list of commands.')
+    else:
+        logging.debug('Responded with: {}'.format(response))
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -150,13 +150,14 @@ def handle_command(command, channel):
 
 if __name__ == "__main__":
 
+    logging.debug('Started bot.')
+
     # hooking SIGINT and SIGTERM from OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     if slack_client.rtm_connect(with_team_state=False):
         print("Bot connected and running!")
-        logging.debug('Started bot.')
         slack_client.api_call(
             "chat.postMessage",
             channel="CCD7USCR0",
