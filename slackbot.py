@@ -16,11 +16,6 @@ from slackclient import SlackClient
 from dotenv import load_dotenv
 load_dotenv('./.env')
 
-# instantiate Slack client
-slack_client = SlackClient(os.getenv('SLACK_BOT_TOKEN'))
-# starterbot's user ID in Slack: value is assigned after the bot starts up
-starterbot_id = None
-
 # constants
 RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
 HELP_COMMAND = "help"
@@ -45,9 +40,6 @@ def signal_handler(sig_num, frame):
         signal.__dict__.items())) if v.startswith('SIG')
         and not v.startswith('SIG_'))
     logging.warning('Received {} signal.'.format(signames[sig_num]))
-    logging.debug('Bot stopped.')
-    logging.debug('Bot was up for about ' +
-                  str(int(time.time() - start_time)) + ' seconds.')
     exit_flag = True
 
 
@@ -150,36 +142,47 @@ def handle_command(command, channel):
 
 if __name__ == "__main__":
 
-    logging.debug('Started bot.')
+    logging.info('Started bot.')
 
     # hooking SIGINT and SIGTERM from OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    if slack_client.rtm_connect(with_team_state=False):
-        print("Bot connected and running!")
-        slack_client.api_call(
-            "chat.postMessage",
-            channel="CCD7USCR0",
-            text="Greetings, inferior beings."
-        )
-        # Read bot's user ID by calling Web API method `auth.test`
-        starterbot_id = slack_client.api_call("auth.test")["user_id"]
-        while not exit_flag:
-            try:
-                command, channel = parse_bot_commands(slack_client.rtm_read())
-                if command:
-                    handle_command(command, channel)
-                time.sleep(RTM_READ_DELAY)
-            except Exception:
-                logging.debug('Encountered exception:', Exception)
-                logging.debug('Trying again in 5 seconds...')
+    while not exit_flag:
+        try:
+            # instantiate Slack client
+            slack_client = SlackClient(os.getenv('SLACK_BOT_TOKEN'))
+            # starterbot's user ID in Slack (actually assigned on startup)
+            starterbot_id = None
+            if slack_client.rtm_connect(with_team_state=False):
+                print("Bot connected and running!")
+                slack_client.api_call(
+                    "chat.postMessage",
+                    channel="CCD7USCR0",
+                    text="Greetings, inferior beings."
+                )
+                # Read bot's user ID by calling Web API method `auth.test`
+                starterbot_id = slack_client.api_call("auth.test")["user_id"]
+                while not exit_flag:
+                    # tests connection, raises exception on failure
+                    slack_client.api_call("api.test")
+                    command, channel = parse_bot_commands(
+                        slack_client.rtm_read())
+                    if command:
+                        handle_command(command, channel)
+                    time.sleep(RTM_READ_DELAY)
+                slack_client.api_call(
+                    "chat.postMessage",
+                    channel="CCD7USCR0",
+                    text="This isn't the last you'll see of me, worms!"
+                )
+            else:
+                print("Connection failed. Exception traceback printed above.")
                 time.sleep(5)
-        slack_client.api_call(
-            "chat.postMessage",
-            channel="CCD7USCR0",
-            text="This isn't the last you'll see of me, worms!"
-        )
-        print("Bot stopped.")
-    else:
-        print("Connection failed. Exception traceback printed above.")
+        except Exception as e:
+            logging.error('Encountered exception:', e)
+            logging.debug('Trying again in 5 seconds...')
+            time.sleep(5)
+    logging.info('Bot stopped')
+    logging.info('Bot was up for about ' +
+                 str(int(time.time() - start_time)) + ' seconds.')
