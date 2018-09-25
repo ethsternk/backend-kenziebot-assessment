@@ -166,10 +166,15 @@ if __name__ == "__main__":
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while not exit_flag:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
-            if command:
-                handle_command(command, channel)
-            time.sleep(RTM_READ_DELAY)
+            try:
+                command, channel = parse_bot_commands(slack_client.rtm_read())
+                if command:
+                    handle_command(command, channel)
+                time.sleep(RTM_READ_DELAY)
+            except Exception:
+                logging.debug('Encountered exception:', Exception)
+                logging.debug('Trying again in 5 seconds...')
+                time.sleep(5)
         slack_client.api_call(
             "chat.postMessage",
             channel="CCD7USCR0",
