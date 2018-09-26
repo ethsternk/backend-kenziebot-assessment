@@ -9,7 +9,7 @@ import os
 import time
 import re
 import logging
-# from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler
 import requests
 import random
 import signal
@@ -26,18 +26,18 @@ greeting = "Greetings, inferior beings."
 log_format = '%(asctime)s : %(levelname)s : %(filename)s : %(message)s'
 
 # logging
-logging.basicConfig(filename='slackbot.log',
-                    level=logging.INFO, format=log_format)
+# logging.basicConfig(filename='slackbot.log',
+#                     level=logging.INFO, format=log_format)
 
-# logger = logging.getLogger(__name__)
-# formatter = logging.Formatter(
-#     '%(asctime)s : %(levelname)s : %(filename)s : %(message)s')
-# LOGFILE = "./slackbot.log"
-# handler = RotatingFileHandler(
-#     LOGFILE, mode='a', maxBytes=2000, backupCount=2, encoding=None, delay=0)
-# handler.setFormatter(formatter)
-# logger.addHandler(handler)
-# logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+formatter = logging.Formatter(
+    '%(asctime)s : %(levelname)s : %(filename)s : %(message)s')
+LOGFILE = "./slackbot.log"
+handler = RotatingFileHandler(
+    LOGFILE, mode='a', maxBytes=2000, backupCount=2, encoding=None, delay=0)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 # exit flag for os signals
 exit_flag = False
@@ -52,7 +52,7 @@ def signal_handler(sig_num, frame):
     signames = dict((k, v) for v, k in reversed(sorted(
         signal.__dict__.items())) if v.startswith('SIG')
         and not v.startswith('SIG_'))
-    logging.warning('Received {} signal.'.format(signames[sig_num]))
+    logger.warning('Received {} signal.'.format(signames[sig_num]))
     exit_flag = True
 
 
@@ -137,11 +137,11 @@ def handle_command(command, channel):
         response = "Sorry, I don't speak Japanese. Try `help`."
 
     # logs command recieved and response sent
-    logging.info('Recieved command: {}'.format(command))
+    logger.info('Recieved command: {}'.format(command))
     if command.startswith("help"):
-        logging.info('Responded with a list of commands.')
+        logger.info('Responded with a list of commands.')
     else:
-        logging.info('Responded with: "{}"'.format(response))
+        logger.info('Responded with: "{}"'.format(response))
 
     # sends the respective response back to the channel
     slack_client.api_call(
@@ -154,7 +154,7 @@ def handle_command(command, channel):
 if __name__ == "__main__":
 
     # log bot starting
-    logging.info('Bot started.')
+    logger.info('Bot started.')
 
     # hooking SIGINT and SIGTERM from OS
     signal.signal(signal.SIGINT, signal_handler)
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                     channel="CCD7USCR0",
                     text=greeting
                 )
-                logging.info('Responded with: "{}"'.format(greeting))
+                logger.info('Responded with: "{}"'.format(greeting))
 
                 # Read bot's user ID by calling Web API method `auth.test`
                 starterbot_id = slack_client.api_call("auth.test")["user_id"]
@@ -198,7 +198,7 @@ if __name__ == "__main__":
                     channel="CCD7USCR0",
                     text=farewell
                 )
-                logging.info('Responded with: "{}"'.format(farewell))
+                logger.info('Responded with: "{}"'.format(farewell))
 
             else:
 
@@ -211,11 +211,11 @@ if __name__ == "__main__":
 
         # catch exceptions, log them, and restart bot in 5 seconds
         except Exception as e:
-            logging.error('Encountered exception:', e)
-            logging.debug('Trying again in 5 seconds...')
+            logger.error('Encountered exception:', e)
+            logger.debug('Trying again in 5 seconds...')
             time.sleep(5)
 
     # log info when bot stops
-    logging.info('Bot stopped.')
-    logging.info('Bot was up for about ' +
+    logger.info('Bot stopped.')
+    logger.info('Bot was up for about ' +
                  str(int(time.time() - start_time)) + ' seconds.')
