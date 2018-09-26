@@ -163,13 +163,25 @@ if __name__ == "__main__":
                 )
                 # Read bot's user ID by calling Web API method `auth.test`
                 starterbot_id = slack_client.api_call("auth.test")["user_id"]
+
+                # counter to ping a test every 10 seconds
+                # second_counter = 0
+
                 while not exit_flag:
                     # tests connection, raises exception on failure
-                    slack_client.api_call("api.test")
                     command, channel = parse_bot_commands(
                         slack_client.rtm_read())
                     if command:
                         handle_command(command, channel)
+                    # pings a test every 10 seconds, but it's not really needed
+                    # because a downed network will not break anything anyway
+                    # else:
+                    #     if second_counter < 10:
+                    #         second_counter += 1
+                    #     else:
+                    #         second_counter = 0
+                    #         slack_client.api_call("api.test")
+                    #         print('ping')
                     time.sleep(RTM_READ_DELAY)
                 slack_client.api_call(
                     "chat.postMessage",
@@ -178,6 +190,7 @@ if __name__ == "__main__":
                 )
             else:
                 print("Connection failed. Exception traceback printed above.")
+                print("Trying again in 5 seconds...")
                 time.sleep(5)
         except Exception as e:
             logging.error('Encountered exception:', e)
