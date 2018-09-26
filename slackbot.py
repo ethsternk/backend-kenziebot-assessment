@@ -9,6 +9,7 @@ import os
 import time
 import re
 import logging
+# from logging.handlers import RotatingFileHandler
 import requests
 import random
 import signal
@@ -18,13 +19,25 @@ load_dotenv('./.env')
 
 # constants
 RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
-HELP_COMMAND = "help"
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 start_time = time.time()
+farewell = "This isn't the last you'll see of me, worms!"
+greeting = "Greetings, inferior beings."
+log_format = '%(asctime)s : %(levelname)s : %(filename)s : %(message)s'
 
 # logging
-logging.basicConfig(filename='slackbot.log', level=logging.DEBUG,
-                    format='%(asctime)s:%(levelname)s:%(message)s')
+logging.basicConfig(filename='slackbot.log',
+                    level=logging.INFO, format=log_format)
+
+# logger = logging.getLogger(__name__)
+# formatter = logging.Formatter(
+#     '%(asctime)s : %(levelname)s : %(filename)s : %(message)s')
+# LOGFILE = "./slackbot.log"
+# handler = RotatingFileHandler(
+#     LOGFILE, mode='a', maxBytes=2000, backupCount=2, encoding=None, delay=0)
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+# logger.setLevel(logging.DEBUG)
 
 # exit flag for os signals
 exit_flag = False
@@ -64,7 +77,7 @@ def parse_direct_mention(message_text):
         If there is no direct mention, returns None.
     """
     matches = re.search(MENTION_REGEX, message_text)
-    # first group = username, second group = remaining message
+    # first group = mentioned username, second group = remaining message
     if matches:
         return (matches.group(1), matches.group(2).strip())
     else:
@@ -98,104 +111,111 @@ def handle_command(command, channel):
     """
         Executes bot command if the command is known.
     """
-    # Default response is help text for the user
-    default_response = "Sorry, I don't speak Japanese. Try `{}`.".format(
-        HELP_COMMAND)
 
-    # Finds and executes the given command, filling in response
+    # response to send back to the user
     response = None
-    # This is where you start to implement more commands!
-    if command.startswith(HELP_COMMAND):
+
+    # change response based on command recieved
+    if command.startswith("help"):
         response = "Here are some commands to try:\n" \
             "> `help` – displays list of commands\n" \
             "> `ping` – displays uptime\n" \
             "> `xkcd` – posts a random xkcd comic\n" \
             "> `kill` – kills bot\n"
-
-    if command.startswith("kill"):
+    elif command.startswith("kill"):
         response = "HA! Foolish mortals. I cannot be killed."
-
-    if command.startswith("ping"):
+    elif command.startswith("ping"):
         response = "I'm about {} old, thank you.".format(
             format_time(int(time.time() - start_time)))
-
-    if command.startswith("xkcd"):
+    elif command.startswith("xkcd"):
         newest = requests.get('http://xkcd.com/info.0.json').json()
         rng = random.randint(1, newest['num'] + 1)
         r = requests.get('http://xkcd.com/' + str(rng) + '/info.0.json').json()
         response = r['alt'] + ' ' + r['img']
-
-    # logs command
-    logging.debug('Recieved command: {}'.format(command))
-    if command.startswith(HELP_COMMAND):
-        logging.debug('Responded with a list of commands.')
     else:
-        logging.debug('Responded with: {}'.format(response))
+        # if no matches, send default response
+        response = "Sorry, I don't speak Japanese. Try `help`."
 
-    # Sends the response back to the channel
+    # logs command recieved and response sent
+    logging.info('Recieved command: {}'.format(command))
+    if command.startswith("help"):
+        logging.info('Responded with a list of commands.')
+    else:
+        logging.info('Responded with: "{}"'.format(response))
+
+    # sends the respective response back to the channel
     slack_client.api_call(
         "chat.postMessage",
         channel=channel,
-        text=response or default_response
+        text=response
     )
 
 
 if __name__ == "__main__":
 
-    logging.info('Started bot.')
+    # log bot starting
+    logging.info('Bot started.')
 
     # hooking SIGINT and SIGTERM from OS
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     while not exit_flag:
+
         try:
-            # instantiate Slack client
+
+            # instantiate slack client
             slack_client = SlackClient(os.getenv('SLACK_BOT_TOKEN'))
-            # starterbot's user ID in Slack (actually assigned on startup)
-            starterbot_id = None
+
+            # connect to slack client
             if slack_client.rtm_connect(with_team_state=False):
+
+                # success message for solidarity
                 print("Bot connected and running!")
+
+                # send greeting to #bot-test channel
                 slack_client.api_call(
                     "chat.postMessage",
                     channel="CCD7USCR0",
-                    text="Greetings, inferior beings."
+                    text=greeting
                 )
+                logging.info('Responded with: "{}"'.format(greeting))
+
                 # Read bot's user ID by calling Web API method `auth.test`
                 starterbot_id = slack_client.api_call("auth.test")["user_id"]
 
-                # counter to ping a test every 10 seconds
-                # second_counter = 0
-
+                # checks for new messages every RTM_READ_DELAY seconds
                 while not exit_flag:
-                    # tests connection, raises exception on failure
                     command, channel = parse_bot_commands(
                         slack_client.rtm_read())
                     if command:
                         handle_command(command, channel)
-                    # pings a test every 10 seconds, but it's not really needed
-                    # because a downed network will not break anything anyway
-                    # else:
-                    #     if second_counter < 10:
-                    #         second_counter += 1
-                    #     else:
-                    #         second_counter = 0
-                    #         slack_client.api_call("api.test")
-                    #         print('ping')
                     time.sleep(RTM_READ_DELAY)
+
+                # send farewell to #bot-test if bot is about to stop
                 slack_client.api_call(
                     "chat.postMessage",
                     channel="CCD7USCR0",
-                    text="This isn't the last you'll see of me, worms!"
+                    text=farewell
                 )
+                logging.info('Responded with: "{}"'.format(farewell))
+
             else:
-                print("Connection failed. Exception traceback printed above.")
-                print("Trying again in 5 seconds...")
+
+                # if the inital connection to the slack api fails,
+                # print error and try again in 5 seconds
+                print("Initial connection failed. "
+                      "Exception printed in log file.\n"
+                      "Trying again in 5 seconds...")
                 time.sleep(5)
+
+        # catch exceptions, log them, and restart bot in 5 seconds
         except Exception as e:
             logging.error('Encountered exception:', e)
             logging.debug('Trying again in 5 seconds...')
             time.sleep(5)
-    logging.info('Bot stopped')
+
+    # log info when bot stops
+    logging.info('Bot stopped.')
     logging.info('Bot was up for about ' +
                  str(int(time.time() - start_time)) + ' seconds.')
