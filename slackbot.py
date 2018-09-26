@@ -218,4 +218,4 @@ if __name__ == "__main__":
     # log info when bot stops
     logger.info('Bot stopped.')
     logger.info('Bot was up for about ' +
-                 str(int(time.time() - start_time)) + ' seconds.')
+                str(int(time.time() - start_time)) + ' seconds.')
